@@ -8,7 +8,7 @@ calendar_manager = CalendarManager()
 class Ticker:
     def __init__(self, ticker):
         self.ticker = ticker
-        self.data = pd.DataFrame(columns=[
+        self.data_columns = [
             'Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Transaction Value',
             'Margin Buy', 'Margin Sell', 'Margin Cash Repay', 'Margin Previous Balance', 'Margin Current Balance', 'Margin Next Limit',
             'Short Buy', 'Short Sell', 'Short Repay', 'Short Previous Balance', 'Short Current Balance', 'Short Next Limit', 'Offset',
@@ -16,25 +16,30 @@ class Ticker:
             'FII Buy', 'FII Sell', 'FII Net Buy/Sell', 'Proprietary Buy', 'Proprietary Sell', 'Proprietary Net Buy/Sell',
             'IT Buy', 'IT Sell', 'IT Net Buy/Sell', 'PT Net Buy/Sell', 'PT Buy (Self-trading)', 'PT Sell (Self-trading)',
             'PT Net Buy/Sell (Self-trading)', 'PT Buy (Hedging)', 'PT Sell (Hedging)', 'PT Net Buy/Sell (Hedging)', 'Three Institutional Investors Net Buy/Sell'
-        ])
+        ]
+        self.data = pd.DataFrame(columns=self.data_columns)
 
     def download(self, start_date, end_date, select_type='ALLBUT0999'):
         trading_days = calendar_manager.get_trading_dates(start_date, end_date)
         total_days = len(trading_days)
+        data_list = []
 
         for i, date in enumerate(trading_days, 1):
             date_str = date.strftime('%Y%m%d')
             date = pd.to_datetime(date_str)
+            row_data = {'Date': date}
 
-            if date not in self.data['Date'].values:
-                self.data = self.data._append({'Date': date}, ignore_index=True)
+            row_data.update(self._fetch_daily_closing_prices(date_str))
+            row_data.update(self._fetch_margin_trading(date_str))
+            row_data.update(self._fetch_daily_stock_ratios(date_str))
+            row_data.update(self._fetch_FIP_trading_data(date_str, select_type))
 
-            self._fetch_daily_closing_prices(date_str)
-            self._fetch_margin_trading(date_str)
-            self._fetch_daily_stock_ratios(date_str)
-            self._fetch_FIP_trading_data(date_str, select_type)
-
+            data_list.append(row_data)
             simple_progress_bar(i, total_days, self.ticker)
+
+        if data_list:
+            new_data = pd.DataFrame(data_list, columns=self.data_columns)
+            self.data = pd.concat([self.data, new_data], ignore_index=True)
 
     def _fetch_daily_closing_prices(self, date_str):
         df = daily_closing_prices(date_str, 'ALL', 8)
@@ -42,15 +47,15 @@ class Ticker:
             stock_data = df[df.iloc[:, 0] == self.ticker]
             if not stock_data.empty:
                 stock_data = stock_data.iloc[0]
-                date = pd.to_datetime(date_str)
-                self.data.loc[self.data['Date'] == date, ['Open', 'High', 'Low', 'Close', 'Volume', 'Transaction Value']] = [
-                    stock_data.iloc[5],  # Opening price
-                    stock_data.iloc[6],  # Highest price
-                    stock_data.iloc[7],  # Lowest price
-                    stock_data.iloc[8],  # Closing price
-                    stock_data.iloc[2],  # Trading volume
-                    stock_data.iloc[4]   # Transaction value
-                ]
+                return {
+                    'Open': stock_data.iloc[5],
+                    'High': stock_data.iloc[6],
+                    'Low': stock_data.iloc[7],
+                    'Close': stock_data.iloc[8],
+                    'Volume': stock_data.iloc[2],
+                    'Transaction Value': stock_data.iloc[4]
+                }
+        return {}
 
     def _fetch_margin_trading(self, date_str):
         df = margin_trading(date_str)
@@ -58,24 +63,22 @@ class Ticker:
             margin_data = df[df.iloc[:, 0] == self.ticker]
             if not margin_data.empty:
                 margin_data = margin_data.iloc[0]
-                date = pd.to_datetime(date_str)
-                self.data.loc[self.data['Date'] == date, [
-                    'Margin Buy', 'Margin Sell', 'Margin Cash Repay', 'Margin Previous Balance', 'Margin Current Balance', 'Margin Next Limit', 
-                    'Short Buy', 'Short Sell', 'Short Repay', 'Short Previous Balance', 'Short Current Balance', 'Short Next Limit', 'Offset']] = [
-                    margin_data.iloc[2],  # Margin buy
-                    margin_data.iloc[3],  # Margin sell
-                    margin_data.iloc[4],  # Cash repayment
-                    margin_data.iloc[5],  # Previous balance
-                    margin_data.iloc[6],  # Current balance
-                    margin_data.iloc[7],  # Next limit
-                    margin_data.iloc[8],  # Short buy
-                    margin_data.iloc[9],  # Short sell
-                    margin_data.iloc[10], # Short repay
-                    margin_data.iloc[11], # Previous balance (short)
-                    margin_data.iloc[12], # Current balance (short)
-                    margin_data.iloc[13], # Next limit (short)
-                    margin_data.iloc[14]  # Offset
-                ]
+                return {
+                    'Margin Buy': margin_data.iloc[2],
+                    'Margin Sell': margin_data.iloc[3],
+                    'Margin Cash Repay': margin_data.iloc[4],
+                    'Margin Previous Balance': margin_data.iloc[5],
+                    'Margin Current Balance': margin_data.iloc[6],
+                    'Margin Next Limit': margin_data.iloc[7],
+                    'Short Buy': margin_data.iloc[8],
+                    'Short Sell': margin_data.iloc[9],
+                    'Short Repay': margin_data.iloc[10],
+                    'Short Previous Balance': margin_data.iloc[11],
+                    'Short Current Balance': margin_data.iloc[12],
+                    'Short Next Limit': margin_data.iloc[13],
+                    'Offset': margin_data.iloc[14]
+                }
+        return {}
 
     def _fetch_daily_stock_ratios(self, date_str):
         df = daily_stock_ratios(date_str, 'ALL')
@@ -83,12 +86,12 @@ class Ticker:
             ratio_data = df[df.iloc[:, 0] == self.ticker]
             if not ratio_data.empty:
                 ratio_data = ratio_data.iloc[0]
-                date = pd.to_datetime(date_str)
-                self.data.loc[self.data['Date'] == date, ['Dividend Yield', 'PE Ratio', 'PB Ratio']] = [
-                    ratio_data.iloc[2],  # Dividend yield (%)
-                    ratio_data.iloc[4],  # PE ratio
-                    ratio_data.iloc[5]   # PB ratio
-                ]
+                return {
+                    'Dividend Yield': ratio_data.iloc[2],
+                    'PE Ratio': ratio_data.iloc[4],
+                    'PB Ratio': ratio_data.iloc[5]
+                }
+        return {}
 
     def _fetch_FIP_trading_data(self, date_str, select_type='ALL'):
         df = FIP_trading_data(date_str, select_type)
@@ -96,30 +99,26 @@ class Ticker:
             fip_data = df[df.iloc[:, 0] == self.ticker]
             if not fip_data.empty:
                 fip_data = fip_data.iloc[0]
-                date = pd.to_datetime(date_str)
-                self.data.loc[self.data['Date'] == date, [
-                    'FII Buy', 'FII Sell', 'FII Net Buy/Sell', 'Proprietary Buy', 'Proprietary Sell', 'Proprietary Net Buy/Sell',
-                    'IT Buy', 'IT Sell', 'IT Net Buy/Sell', 'PT Net Buy/Sell', 'PT Buy (Self-trading)', 'PT Sell (Self-trading)',
-                    'PT Net Buy/Sell (Self-trading)', 'PT Buy (Hedging)', 'PT Sell (Hedging)', 'PT Net Buy/Sell (Hedging)', 'Three Institutional Investors Net Buy/Sell'
-                ]] = [
-                    fip_data.iloc[2],  # FII Buy (excluding proprietary trading by foreign investors)
-                    fip_data.iloc[3],  # FII Sell (excluding proprietary trading by foreign investors)
-                    fip_data.iloc[4],  # FII Net Buy/Sell (excluding proprietary trading by foreign investors)
-                    fip_data.iloc[5],  # Proprietary Buy (by foreign investors)
-                    fip_data.iloc[6],  # Proprietary Sell (by foreign investors)
-                    fip_data.iloc[7],  # Proprietary Net Buy/Sell (by foreign investors)
-                    fip_data.iloc[8],  # IT Buy
-                    fip_data.iloc[9],  # IT Sell
-                    fip_data.iloc[10], # IT Net Buy/Sell
-                    fip_data.iloc[11], # PT Net Buy/Sell
-                    fip_data.iloc[12], # PT Buy (self-trading)
-                    fip_data.iloc[13], # PT Sell (self-trading)
-                    fip_data.iloc[14], # PT Net Buy/Sell (self-trading)
-                    fip_data.iloc[15], # PT Buy (hedging)
-                    fip_data.iloc[16], # PT Sell (hedging)
-                    fip_data.iloc[17], # PT Net Buy/Sell (hedging)
-                    fip_data.iloc[18]  # Three Institutional Investors Net Buy/Sell
-                ]
+                return {
+                    'FII Buy': fip_data.iloc[2],
+                    'FII Sell': fip_data.iloc[3],
+                    'FII Net Buy/Sell': fip_data.iloc[4],
+                    'Proprietary Buy': fip_data.iloc[5],
+                    'Proprietary Sell': fip_data.iloc[6],
+                    'Proprietary Net Buy/Sell': fip_data.iloc[7],
+                    'IT Buy': fip_data.iloc[8],
+                    'IT Sell': fip_data.iloc[9],
+                    'IT Net Buy/Sell': fip_data.iloc[10],
+                    'PT Net Buy/Sell': fip_data.iloc[11],
+                    'PT Buy (Self-trading)': fip_data.iloc[12],
+                    'PT Sell (Self-trading)': fip_data.iloc[13],
+                    'PT Net Buy/Sell (Self-trading)': fip_data.iloc[14],
+                    'PT Buy (Hedging)': fip_data.iloc[15],
+                    'PT Sell (Hedging)': fip_data.iloc[16],
+                    'PT Net Buy/Sell (Hedging)': fip_data.iloc[17],
+                    'Three Institutional Investors Net Buy/Sell': fip_data.iloc[18]
+                }
+        return {}
 
 # Usage example:
 # ticker = Ticker('2330')  # Example ticker symbol for TSMC
