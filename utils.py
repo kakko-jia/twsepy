@@ -11,7 +11,7 @@ class RateLimiter:
     Implement rate limiting using threading lock and timestamp.
     """
 
-    def __init__(self, rate_limit, period, enabled = True):
+    def __init__(self, rate_limit = 1, period = 1, enabled = True):
         """
         Initialize RateLimiter instance.
 
@@ -65,7 +65,7 @@ class RateLimiter:
 
 
 # Global default rate limiter
-default_rate_limiter = RateLimiter(rate_limit=5, period=5)
+default_rate_limiter = RateLimiter(rate_limit=5, period=5, enabled = False)
 
 def limited_request(url, headers=None, params=None, proxy=None, rate_limiter=default_rate_limiter):
     """

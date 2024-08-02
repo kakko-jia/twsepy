@@ -1,13 +1,18 @@
 import pandas as pd
 from twsepy.core import daily_closing_prices, margin_trading, daily_stock_ratios, FIP_trading_data
 from twsepy.calendar_manager import CalendarManager
+from twsepy.utils import RateLimiter
 from twsepy.utils import simple_progress_bar
 
 calendar_manager = CalendarManager()
+# Global default rate limiter
+# No idea how to remove it.
+default_rate_limiter = RateLimiter(rate_limit=5, period=5, enabled = False)
 
 class Ticker:
-    def __init__(self, ticker):
+    def __init__(self, ticker, rate_limiter=default_rate_limiter):
         self.ticker = ticker
+        self.rate_limiter = rate_limiter
         self.data_columns = [
             'Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Transaction Value',
             'Margin Buy', 'Margin Sell', 'Margin Cash Repay', 'Margin Previous Balance', 'Margin Current Balance', 'Margin Next Limit',
@@ -42,7 +47,7 @@ class Ticker:
             self.data = pd.concat([self.data, new_data], ignore_index=True)
 
     def _fetch_daily_closing_prices(self, date_str):
-        df = daily_closing_prices(date_str, 'ALL', 8)
+        df = daily_closing_prices(date_str, 'ALL', 8, rate_limiter=self.rate_limiter)
         if df is not None and not df.empty:
             stock_data = df[df.iloc[:, 0] == self.ticker]
             if not stock_data.empty:
@@ -58,7 +63,7 @@ class Ticker:
         return {}
 
     def _fetch_margin_trading(self, date_str):
-        df = margin_trading(date_str)
+        df = margin_trading(date_str, rate_limiter=self.rate_limiter)
         if df is not None and not df.empty:
             margin_data = df[df.iloc[:, 0] == self.ticker]
             if not margin_data.empty:
@@ -81,7 +86,7 @@ class Ticker:
         return {}
 
     def _fetch_daily_stock_ratios(self, date_str):
-        df = daily_stock_ratios(date_str, 'ALL')
+        df = daily_stock_ratios(date_str, 'ALL', rate_limiter=self.rate_limiter)
         if df is not None and not df.empty:
             ratio_data = df[df.iloc[:, 0] == self.ticker]
             if not ratio_data.empty:
@@ -94,7 +99,7 @@ class Ticker:
         return {}
 
     def _fetch_FIP_trading_data(self, date_str, select_type='ALL'):
-        df = FIP_trading_data(date_str, select_type)
+        df = FIP_trading_data(date_str, select_type, rate_limiter=self.rate_limiter)
         if df is not None and not df.empty:
             fip_data = df[df.iloc[:, 0] == self.ticker]
             if not fip_data.empty:
