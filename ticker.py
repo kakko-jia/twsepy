@@ -1,3 +1,20 @@
+# Copyright 2024 JayC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Your Python code starts here
+
+
 import pandas as pd
 from twsepy.core import daily_closing_prices, margin_trading, daily_stock_ratios, FIP_trading_data
 from twsepy.calendar_manager import CalendarManager

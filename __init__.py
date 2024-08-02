@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-#
-# twsepy - TWSE market data downloader
+# Copyright 2024 JayC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+
+# Your Python code starts here
+
 
 from .core import daily_closing_prices, market_trading_info, daily_stock_ratios, margin_trading, FIP_trading_data
 from .config import DEFAULT_HEADERS, BASE_URL
