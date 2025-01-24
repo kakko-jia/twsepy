@@ -22,7 +22,7 @@ twsepy 是一個用於從台灣證券交易所 (TWSE) 獲取金融數據的 Pyth
 安裝
 ---
 
-目前 twsepy 還未上傳至 pip。你可以從 GitHub 安裝：
+目前 twsepy 還未上傳至 pip。可以從 GitHub 下載：
 
 
 快速開始
